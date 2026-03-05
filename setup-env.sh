@@ -21,6 +21,7 @@ q() {
         15) name="Question-15 Etcd-Fix" ;;
         16) name="Question-16 NodePort" ;;
         17) name="Question-17 TLS-Config" ;;
+        18) name="question-18-control-plane-issues" ;;
         *) echo "Usage: q <num> or q<num>"; return 1 ;;
     esac
     
