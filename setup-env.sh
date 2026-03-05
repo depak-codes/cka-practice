@@ -1,6 +1,13 @@
 #!/bin/bash
 
-# Define the function as before
+# 1. Define the base directory explicitly
+export BASE_DIR="$(pwd)"
+
+# 2. Automatically make all .bash and .sh files executable
+# Added a check: if BASE_DIR is empty, use current directory (.)
+find "${BASE_DIR:-.}" -type f \( -name "*.bash" -o -name "*.sh" \) -exec chmod +x {} +
+
+# Define the function
 q() {
     local num=$1
     case $num in
@@ -25,16 +32,14 @@ q() {
         19) name="Question-19 Data-Plane-Issues" ;;
         *) echo "Usage: q <num> or q<num>"; return 1 ;;
     esac
-    
-    bash "$(pwd)/scripts/run-question.sh" "$name"
+
+    # Using the BASE_DIR variable we defined above for consistency
+    bash "$BASE_DIR/scripts/run-question.sh" "$name"
 }
 
-# NEW: This loop automatically creates aliases q1, q2... q19
+# Create aliases q1, q2... q19
 for i in {1..19}; do
     alias "q$i"="q $i"
 done
 
 echo "✅ Ready! You can now use 'q 1' OR just 'q1' to start labs."
-
-# Automatically make all .bash and .sh files executable in the repo
-find "$BASE_DIR" -type f \( -name "*.bash" -o -name "*.sh" \) -exec chmod +x {} +
