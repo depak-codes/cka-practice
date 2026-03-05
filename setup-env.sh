@@ -21,15 +21,16 @@ q() {
         15) name="Question-15 Etcd-Fix" ;;
         16) name="Question-16 NodePort" ;;
         17) name="Question-17 TLS-Config" ;;
-        18) name="question-18-control-plane-issues" ;;
+        18) name="Question-18 Control-Plane-Issues" ;;
+        19) name="Question-19 Data-Plane-Issues" ;;
         *) echo "Usage: q <num> or q<num>"; return 1 ;;
     esac
     
     bash "$(pwd)/scripts/run-question.sh" "$name"
 }
 
-# NEW: This loop automatically creates aliases q1, q2... q17
-for i in {1..17}; do
+# NEW: This loop automatically creates aliases q1, q2... q19
+for i in {1..19}; do
     alias "q$i"="q $i"
 done
 
