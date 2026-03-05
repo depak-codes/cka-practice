@@ -1,16 +1,8 @@
 #!/bin/bash
 
-# 1. Basic Kubernetes Aliases
-alias k='kubectl'
-alias kgp='k get pods'
-alias kgn='k get nodes'
-alias kgs='k get svc'
-alias ccat='pygmentize -g'
-
-# 2. The "q" Mapping Function
+# Define the function as before
 q() {
     local num=$1
-    local name=""
     case $num in
         1)  name="Question-1 MariaDB-Persistent volume" ;;
         2)  name="Question-2 ArgoCD" ;;
@@ -29,16 +21,15 @@ q() {
         15) name="Question-15 Etcd-Fix" ;;
         16) name="Question-16 NodePort" ;;
         17) name="Question-17 TLS-Config" ;;
-        *) echo "Usage: q <number> (e.g., q 8)"; return 1 ;;
+        *) echo "Usage: q <num> or q<num>"; return 1 ;;
     esac
-
-    echo "Launching: $name"
-    # Logic to find the script path dynamically
-    SCRIPT_PATH="$(pwd)/scripts/run-question.sh"
-    bash "$SCRIPT_PATH" "$name"
+    
+    bash "$(pwd)/scripts/run-question.sh" "$name"
 }
 
-# Export the function so it's available in the shell
-export -f q
+# NEW: This loop automatically creates aliases q1, q2... q17
+for i in {1..17}; do
+    alias "q$i"="q $i"
+done
 
-echo "✅ Environment Ready! Use 'q 1' to 'q 17' to launch labs."
+echo "✅ Ready! You can now use 'q 1' OR just 'q1' to start labs."
