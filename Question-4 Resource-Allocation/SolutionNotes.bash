@@ -1,20 +1,16 @@
-# Step 1: pause workload
-kubectl scale deployment wordpress --replicas 0
+# 1. Check total node capacity
+kubectl describe node | grep -A 5 "Capacity"
 
-# Step 2: edit deployment (set same resources on all init + main containers)
-kubectl edit deployment wordpress
-# In spec.template.spec.containers[] and spec.template.spec.initContainers[] set:
-# resources:
-#   requests:
-#     cpu: "300m"
-#     memory: "600Mi"
-#   limits:
-#     cpu: "400m"
-#     memory: "700Mi"
-# (Values are just an example of dividing the node evenly and keeping some headroom;
-# ensure every container—init and main—uses the exact same requests/limits.)
+# 2. Check what is already allocated (The Noise pod)
+kubectl describe node | grep -A 10 "Allocated resources"
 
-# Step 3: resume replicas
-kubectl scale deployment wordpress --replicas 3
-kubectl rollout status deployment wordpress
-kubectl get pods -l app=wordpress
+# 3. Calculation Example:
+# Total: 4000Mi
+# Allocated: 1000Mi
+# Remaining: 3000Mi
+# Overhead (25% of 3000): 750Mi
+# Available for App: 2250Mi
+# Per Pod (2250 / 3): 750Mi per pod
+
+# 4. Apply to deployment
+kubectl edit deploy wordpress
