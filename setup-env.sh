@@ -35,3 +35,6 @@ for i in {1..19}; do
 done
 
 echo "✅ Ready! You can now use 'q 1' OR just 'q1' to start labs."
+
+# Automatically make all .bash and .sh files executable in the repo
+find "$BASE_DIR" -type f \( -name "*.bash" -o -name "*.sh" \) -exec chmod +x {} +
