@@ -30,6 +30,7 @@ q() {
         17) name="Question-17 TLS-Config" ;;
         18) name="Question-18 Control-Plane-Issues" ;;
         19) name="Question-19 Data-Plane-Issues" ;;
+        20) name="Question-20 Etcd-Disaster-Recovery" ;;
         *) echo "Usage: q <num> or q<num>"; return 1 ;;
     esac
 
@@ -37,8 +38,8 @@ q() {
     bash "$BASE_DIR/scripts/run-question.sh" "$name"
 }
 
-# Create aliases q1, q2... q19
-for i in {1..19}; do
+# Create aliases q1, q2... q20
+for i in {1..20}; do
     alias "q$i"="q $i"
 done
 
