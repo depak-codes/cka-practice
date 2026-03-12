@@ -1,25 +1,38 @@
 #!/bin/bash
-echo "🔍 Checking Data Plane Status..."
+echo "🔎 Starting Automated Validation for Q19..."
 
-# 1. Node Status
-if kubectl get nodes node01 | grep -q " Ready"; then
-    echo "✅ Node node01 is Ready"
+# 1. Verify Node Status
+WORKER=$(kubectl get nodes -l '!node-role.kubernetes.io/control-plane' -o name | cut -d/ -f2)
+STATUS=$(kubectl get node $WORKER -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')
+
+if [ "$STATUS" == "True" ]; then
+    echo "✅ Node $WORKER is Ready."
 else
-    echo "❌ Node node01 is still NotReady"
+    echo "❌ Node $WORKER is still NotReady."
 fi
 
-# 2. DNS Status
-READY_DNS=$(kubectl get deploy coredns -n kube-system -o jsonpath='{.status.readyReplicas}')
-if [ "$READY_DNS" -gt 0 ]; then
-    echo "✅ CoreDNS is running ($READY_DNS replicas)"
+# 2. Verify CNI/Pods
+STUCK_PODS=$(kubectl get pods -A | grep -c "ContainerCreating")
+if [ "$STUCK_PODS" -eq 0 ]; then
+    echo "✅ No pods stuck in ContainerCreating."
 else
-    echo "❌ CoreDNS is down"
+    echo "❌ There are still $STUCK_PODS pods stuck in ContainerCreating."
 fi
 
-# 3. Service Endpoints
-EP=$(kubectl get endpoints test-service -o jsonpath='{.subsets[0].addresses[0].ip}')
+# 3. Verify DNS
+DNS_REPLICAS=$(kubectl get deploy -n kube-system coredns -o jsonpath='{.status.readyReplicas}')
+if [ "$DNS_REPLICAS" -ge 1 ]; then
+    echo "✅ CoreDNS is scaled up and running ($DNS_REPLICAS replicas)."
+else
+    echo "❌ CoreDNS is down or not fully ready."
+fi
+
+# 4. Verify Endpoints
+EP=$(kubectl get ep troubleshooting-svc -o jsonpath='{..ip}')
 if [ -n "$EP" ]; then
-    echo "✅ test-service has active endpoints: $EP"
+    echo "✅ Service Endpoints found: $EP"
 else
-    echo "❌ test-service has NO endpoints. Check selectors."
+    echo "❌ Service troubleshooting-svc still has no endpoints."
 fi
+
+echo "------------------------------------------------"

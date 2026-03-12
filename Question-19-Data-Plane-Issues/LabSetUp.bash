@@ -1,27 +1,53 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Setting up Data Plane Troubleshooting Lab (Q19)..."
+echo "🚀 Initializing Comprehensive Data Plane Disaster (Q19)..."
 
-# 1. Break Kubelet on worker node (Enable Swap simulation)
-# We simulate a "swap" failure by stopping kubelet and messing with a config flag
-ssh node01 "sudo systemctl stop kubelet"
-ssh node01 "sudo sed -i 's/failSwapOn: true/failSwapOn: false/g' /var/lib/kubelet/config.yaml" # Just to touch the file
-# Note: To truly simulate swap error in labs, we often just stop the service and point to a bad cert.
+# 1. DYNAMIC NODE IDENTIFICATION
+WORKER_NODE=$(kubectl get nodes --no-headers -l '!node-role.kubernetes.io/control-plane' | awk '{print $1}' | head -n 1)
 
-# 2. Break Kubelet Config (Wrong Certificate Path)
-ssh node01 "sudo sed -i 's|client-certificate: /var/lib/kubelet/pki/kubelet-client-current.pem|client-certificate: /var/lib/kubelet/pki/kubelet-client-BROKEN.pem|g' /etc/kubernetes/kubelet.conf"
+if [ -z "$WORKER_NODE" ]; then
+    echo "❌ Error: Worker node not found."
+    exit 1
+fi
 
-# 3. Break CNI (Rename config directory)
-ssh node01 "sudo mv /etc/cni/net.d /etc/cni/net.d.backup"
+echo "🎯 Target Worker Node: $WORKER_NODE"
 
-# 4. Break CoreDNS (Scale to 0)
+# 2. SCENARIO: SWAP ERROR & BAD CERTS (Node NotReady)
+# We simulate the Swap error by adding a 'failSwapOn: true' (even if swap is off, it triggers the check) 
+# and breaking the cert path in kubelet.conf.
+echo "🔧 Breaking Kubelet Config & Simulating Swap/Cert errors..."
+ssh -o StrictHostKeyChecking=no $WORKER_NODE << EOF
+  # Break the cert path
+  sudo sed -i 's|client-certificate: /var/lib/kubelet/pki/kubelet-client-current.pem|client-certificate: /var/lib/kubelet/pki/kubelet-client-BROKEN.pem|g' /etc/kubernetes/kubelet.conf
+  
+  # Ensure Kubelet is stopped to trigger Node NotReady & Taints
+  sudo systemctl stop kubelet
+EOF
+
+# 3. SCENARIO: CNI PLUGIN ISSUE (Pods stuck in ContainerCreating)
+# We rename the directory so the network isn't ready even if kubelet starts.
+echo "🔌 Breaking CNI network config..."
+ssh -o StrictHostKeyChecking=no $WORKER_NODE "sudo mv /etc/cni/net.d /etc/cni/net.d.backup 2>/dev/null || true"
+
+# 4. SCENARIO: DNS LOOKUP FAILURE (Scale to 0)
+# This simulates the 'nslookup kubernetes.default' failure.
+echo "🌐 Breaking DNS (Scaling CoreDNS to 0)..."
 kubectl scale deployment coredns -n kube-system --replicas=0
 
-# 5. Break Service Selector (Simulate a typo)
-# We create a dummy service with a wrong selector
-kubectl create deployment nginx-test --image=nginx --replicas=1
-kubectl expose deployment nginx-test --name=test-service --port=80 --selector=app=wrong-selector
+# 5. SCENARIO: CLUSTERIP / ENDPOINTS FAILURE
+# Create a deployment and a service with a mismatched selector.
+echo "📦 Creating Service with Mismatched Selector..."
+kubectl delete deployment troubleshooting-deploy service troubleshooting-svc --ignore-not-found=true
 
-echo "⚠️  Worker Node node01 is now failing and DNS is down."
-echo "Triage order: Node Status -> Kubelet -> CNI -> DNS -> Service Endpoints"
+kubectl create deployment troubleshooting-deploy --image=nginx:alpine --replicas=1
+# Purposefully wrong selector to ensure Endpoints show <none>
+kubectl expose deployment troubleshooting-deploy --name=troubleshooting-svc --port=80 --selector=app=wrong-label-target
+
+echo "-----------------------------------------------------------------------"
+echo "✅ LAB READY. Your Triage Objectives:"
+echo "1. Fix $WORKER_NODE status (Check journalctl for swap/certs)."
+echo "2. Fix CNI (Move net.d.backup -> net.d and restart kubelet)."
+echo "3. Fix DNS (Check CoreDNS pods and scale up)."
+echo "4. Fix Service (Check describe svc endpoints and fix selector)."
+echo "-----------------------------------------------------------------------"

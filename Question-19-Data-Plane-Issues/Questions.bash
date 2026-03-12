@@ -1,14 +1,15 @@
-# Question 19: Data Plane & Networking Issues
-# Scenario:
-# 1. Node 'node01' is 'NotReady'. New pods won't schedule there.
-# 2. Pods are stuck in 'ContainerCreating'.
-# 3. DNS lookups (nslookup) are failing cluster-wide.
-# 4. 'test-service' is unreachable via ClusterIP.
-
-# Task:
-# - Fix node01 so it becomes 'Ready'.
-# - Ensure CNI is functional on node01.
-# - Repair the DNS service.
-# - Fix the 'test-service' so it has active endpoints.
-
-# Video Reference: https://youtu.be/cBw0I7u2oVk
+#!/bin/bash
+echo "================================================================"
+echo "CKA Q19: DATA PLANE & NETWORK TRIAGE"
+echo "================================================================"
+echo "Symptom 1: A worker node is showing 'NotReady'."
+echo "Symptom 2: New pods are stuck in 'ContainerCreating'."
+echo "Symptom 3: Internal DNS resolution is failing."
+echo "Symptom 4: A service exists but has no active endpoints."
+echo ""
+echo "TASK:"
+echo "1. Restore the worker node to 'Ready' status."
+echo "2. Ensure the CNI is properly configured on the worker."
+echo "3. Fix the CoreDNS deployment."
+echo "4. Correct the service 'troubleshooting-svc' to route traffic."
+echo "================================================================"

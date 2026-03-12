@@ -1,35 +1,35 @@
-# --- STEP 1: NODE NOT READY ---
-kubectl get nodes
-kubectl describe node node01 # Check Taints: NoSchedule/NoExecute
-ssh node01
-sudo systemctl status kubelet
-sudo journalctl -u kubelet -f --no-pager
+#!/bin/bash
+# --- 1. NODE & KUBELET TRIAGE ---
+# Identify node name dynamically
+WORKER=$(kubectl get nodes -l '!node-role.kubernetes.io/control-plane' -o name | cut -d/ -f2)
 
-# FIX: If 'Swap' error found:
-sudo swapoff -a
-# FIX: If 'Cert' error found in /etc/kubernetes/kubelet.conf:
-sudo vi /etc/kubernetes/kubelet.conf # Correct the client-certificate path
+# SSH and check status/logs
+ssh $WORKER
+sudo systemctl status kubelet
+journalctl -u kubelet -n 50 --no-pager
+
+# Fix Certificate Path in /etc/kubernetes/kubelet.conf
+# Fix Swap if reported: sudo swapoff -a
 sudo systemctl restart kubelet
 
-# --- STEP 2: CNI / CONTAINER CREATING ---
-# If node is Ready but pods stuck in ContainerCreating:
-kubectl describe pod <pod-name>
-# Check CNI config on node:
-ls /etc/cni/net.d
-# FIX: 
+# --- 2. CNI TRIAGE ---
+# If node is Ready but pods stay in 'ContainerCreating'
+# Check for 'NetworkReady=false' in 'kubectl describe node'
+# Check CNI config directory
+ssh $WORKER
+ls /etc/cni/
 sudo mv /etc/cni/net.d.backup /etc/cni/net.d
+sudo systemctl restart kubelet
 
-# --- STEP 3: DNS FAILURES ---
-# Symptom: nslookup kubernetes.default fails
-kubectl get svc -n kube-system # Check kube-dns IP
-kubectl get pods -n kube-system # Check if coredns pods are running
-# FIX:
+# --- 3. DNS TRIAGE ---
+# If nslookup fails inside a pod
+kubectl get deploy -n kube-system coredns
 kubectl scale deployment coredns -n kube-system --replicas=2
 
-# --- STEP 4: SERVICE ENDPOINTS ---
-# Symptom: Curl to ClusterIP fails
-kubectl describe svc test-service
-# Check if 'Endpoints' is <none>
-kubectl get pods --show-labels # Verify labels match selector
-# FIX:
-kubectl edit svc test-service # Update selector to match pod labels
+# --- 4. SERVICE/ENDPOINT TRIAGE ---
+# Check why ClusterIP fails
+kubectl describe svc troubleshooting-svc
+kubectl get pods --show-labels
+# Match the selector in the service to the pod's label
+kubectl edit svc troubleshooting-svc
+# Change 'app: wrong-label-target' to 'app: troubleshooting-deploy'
