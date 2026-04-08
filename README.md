@@ -20,3 +20,4 @@ bash scripts/run-question.sh "Question-9 Network-Policy" to apply the setup and 
 | Question-01 | Install Argo CD using Helm without CRDs | https://youtu.be/8GzJ-x9ffE0 |
 
 More questions can be added by copying the template folder and dropping in the three bash files from the original collection.
+# MacBook Neo Setup Complete - Tue  7 Apr 2026 23:44:42 EDT
