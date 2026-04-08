@@ -5,13 +5,17 @@ echo "🔹 Creating namespaces..."
 kubectl create namespace frontend --dry-run=client -o yaml | kubectl apply -f -
 kubectl create namespace backend --dry-run=client -o yaml | kubectl apply -f -
 
+echo "🔹 Adding critical labels to namespaces..."
+# This is required for the namespaceSelector in the NetworkPolicy to work!
+kubectl label namespace frontend name=frontend --overwrite
+kubectl label namespace backend name=backend --overwrite
+
 echo "🔹 Deploying backend app..."
 kubectl apply -n backend -f - <<EOF
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend-deployment
-  namespace: backend
 spec:
   replicas: 1
   selector:
@@ -30,7 +34,7 @@ spec:
 EOF
 
 echo "🔹 Exposing backend as ClusterIP service..."
-kubectl expose deployment backend-deployment -n backend --port=80 --target-port=80 --name=backend-service
+kubectl expose deployment backend-deployment -n backend --port=80 --target-port=80 --name=backend-service || true
 
 echo "🔹 Deploying frontend app..."
 kubectl apply -n frontend -f - <<EOF
@@ -38,7 +42,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend-deployment
-  namespace: frontend
 spec:
   replicas: 1
   selector:
@@ -55,11 +58,11 @@ spec:
         command: ["sleep", "3600"]
 EOF
 
-echo "🔹 Creating NetworkPolicy files..."
+echo "🔹 Creating NetworkPolicy files in /root/network-policies..."
 mkdir -p /root/network-policies
-cd /root/network-policies
 
-cat <<EOF > network-policy-1.yaml
+# Policy 1: Too Permissive (Allow All)
+cat <<EOF > /root/network-policies/network-policy-1.yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -73,7 +76,8 @@ spec:
   - Ingress
 EOF
 
-cat <<EOF > network-policy-2.yaml
+# Policy 2: Mid Permissive (IP Block)
+cat <<EOF > /root/network-policies/network-policy-2.yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -85,11 +89,8 @@ spec:
       app: backend
   ingress:
   - from:
-    - namespaceSelector:
-        matchLabels:
-          name: frontend
     - ipBlock:
-        cidr: 172.16.0.0/16
+        cidr: 0.0.0.0/0
     ports:
     - protocol: TCP
       port: 80
@@ -97,7 +98,8 @@ spec:
   - Ingress
 EOF
 
-cat <<EOF > network-policy-3.yaml
+# Policy 3: Least Permissive (Winner)
+cat <<EOF > /root/network-policies/network-policy-3.yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -112,7 +114,7 @@ spec:
     - namespaceSelector:
         matchLabels:
           name: frontend
-    - podSelector:
+      podSelector:
         matchLabels:
           app: frontend
     ports:
@@ -122,5 +124,7 @@ spec:
   - Ingress
 EOF
 
-cd /
-echo "✅ Lab setup complete. Three network policy files created in /root/network-policies."
+echo -e "\n✅ Lab setup complete."
+echo "📍 Deployment labels: app=frontend and app=backend"
+echo "📍 Namespace labels: name=frontend and name=backend"
+echo "📍 Policies located in: /root/network-policies"

@@ -1,16 +1,22 @@
-# Step one
-# We want to edit the config map to remove all references to tls v1.2
-k edit cm -n nginx-static nginx-config # remove TLSv1.2 from SSL protocols (remove from last applied configuration for safety)
+# 1. Edit the ConfigMap to restrict TLS versions
+# Remove 'TLSv1.2' from the ssl_protocols line
+kubectl edit cm -n nginx-static nginx-config
 
-# Step 2
-# We need to get the IP of the service
-k get svc -n nginx-static
-# We need to add this IP with the host name to /etc/hosts
-sudo echo 'x.x.x.x ckaquestion.k8s.local' >> /etc/hosts
-# Check the hosts file has been updated the IP and host should be added to the bottom of the file
-sudo cat /etc/hosts
+# 2. Get the Service ClusterIP
+# Use -o jsonpath to get ONLY the IP for easier copy-pasting
+SVC_IP=$(kubectl get svc -n nginx-static nginx-static -o jsonpath='{.spec.clusterIP}')
 
-# Step 3
-# If we run the check commands now we see v1.2 is still working, this is because we need to restart the deployment to use the new CM config
-k rollout restart -n nginx-static deployment nginx-static
-# Test the commands again and the v1.2 should no longer work
+# 3. Add the entry to /etc/hosts
+# Using 'tee -a' is safer than '>>' when using sudo with redirects
+echo "$SVC_IP ckaquestion.k8s.local" | sudo tee -a /etc/hosts
+
+# 4. Restart the deployment to pick up the ConfigMap change
+# Kubernetes pods do not automatically restart when a subPath-mounted ConfigMap is updated
+kubectl rollout restart deployment nginx-static -n nginx-static
+
+# 5. Verify the fix
+# This should fail with a "protocol version" error
+curl -vk --tls-max 1.2 https://ckaquestion.k8s.local
+
+# This should work and return "Hello TLS"
+curl -vk --tlsv1.3 https://ckaquestion.k8s.local
