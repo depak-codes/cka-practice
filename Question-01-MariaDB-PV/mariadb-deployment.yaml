@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: maria-deployment
+  name: mariadb
   namespace: mariadb
   labels:
     app: maria-deployment
