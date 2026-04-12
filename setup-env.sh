@@ -4,12 +4,12 @@
 export BASE_DIR="$(pwd)"
 
 # 2. Automatically make all .bash and .sh files executable
-# Added a check: if BASE_DIR is empty, use current directory (.)
 find "${BASE_DIR:-.}" -type f \( -name "*.bash" -o -name "*.sh" \) -exec chmod +x {} +
 
 # Define the function
 q() {
     local num=$1
+    local name=""
     case $num in
         1)  name="Question-01-MariaDB-PV" ;;
         2)  name="Question-02-ArgoCD" ;;
@@ -34,8 +34,23 @@ q() {
         *) echo "Usage: q <num>"; return 1 ;;
     esac
 
-    # Using the BASE_DIR variable we defined above for consistency
-    bash "$BASE_DIR/scripts/run-question.sh" "$name"
+    # CHANGE 1: Automatically CD into the folder
+    cd "$BASE_DIR/$name" || { echo "❌ Folder $name not found!"; return 1; }
+
+    # CHANGE 2: Execute LabSetUp.bash if it exists
+    if [ -f "LabSetUp.bash" ]; then
+        echo "🚀 Setting up environment for $name..."
+        bash LabSetUp.bash
+    fi
+
+    # CHANGE 3: Display the content of Questions.bash
+    if [ -f "Questions.bash" ]; then
+        echo -e "\n📝 --- QUESTION DETAILS ---"
+        cat Questions.bash
+        echo -e "---------------------------\n"
+    else
+        echo "⚠️  Questions.bash not found in this directory."
+    fi
 }
 
 # Create aliases q1, q2... q20
@@ -43,4 +58,4 @@ for i in {1..20}; do
     alias "q$i"="q $i"
 done
 
-echo "✅ Ready! You can now use 'q 1' OR just 'q1' to start labs."
+echo "✅ Environment Ready! Type 'q1' to jump into Question 1."
