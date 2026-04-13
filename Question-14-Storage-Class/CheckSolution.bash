@@ -33,7 +33,7 @@ else
 fi
 
 # 4. Ensure no other defaults exist
-DEFAULT_COUNT=$(kubectl get sc -o json | grep -c "is-default-class\":\"true\"")
+DEFAULT_COUNT=$(kubectl get sc -o jsonpath='{.items[*].metadata.annotations.storageclass\.kubernetes\.io/is-default-class}' | grep -o "true" | wc -l)
 if [ "$DEFAULT_COUNT" -eq 1 ]; then
     echo -e "${GREEN}✓ No duplicate default storage classes found.${NC}"
 else
