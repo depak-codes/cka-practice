@@ -10,4 +10,5 @@
 # existing routing rules from the current Ingress resource named web.
 # Note: A GatewayClass named nginx-class is already installed in the cluster
 
-#Video link - https://youtu.be/G9zispvOCHE
+# reference 
+# Gateway API - https://gateway-api.sigs.k8s.io/
