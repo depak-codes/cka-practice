@@ -24,7 +24,7 @@ for i in "${!PARAMS[@]}"; do
 done
 
 # 3. Check Persistence File
-if [ -f "/etc/sysctl.d/k8s.conf" ]; then
+if [ -f "/etc/sysctl.d/99-k8s.conf" ]; then
     echo "✅ PASS: Configuration file /etc/sysctl.d/k8s.conf exists."
 else
     echo "⚠️  WARNING: No config file found in /etc/sysctl.d/. Changes might not survive reboot!"
