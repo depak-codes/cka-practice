@@ -17,11 +17,13 @@ if ! kubectl get deploy $DEPLOY_NAME -n $NAMESPACE &> /dev/null; then
 fi
 
 # 2. Check for the Sidecar Container
-HAS_SIDECAR=$(kubectl get deploy $DEPLOY_NAME -o jsonpath="{.spec.template.spec.containers[?(@.name=='$SIDECAR_NAME')].name}")
-if [ "$HAS_SIDECAR" == "$SIDECAR_NAME" ]; then
-    echo "✅ PASS: Sidecar container '$SIDECAR_NAME' found."
+HAS_SIDECAR=$(kubectl get deploy $DEPLOY_NAME -o jsonpath="{.spec.template.spec.initContainers[?(@.name=='$SIDECAR_NAME')].name}")
+RESTART_POLICY=$(kubectl get deploy $DEPLOY_NAME -o jsonpath="{.spec.template.spec.initContainers[?(@.name=='$SIDECAR_NAME')].restartPolicy}")
+
+if [ "$HAS_SIDECAR" == "$SIDECAR_NAME" ] && [ "$RESTART_POLICY" == "Always" ]; then
+    echo "✅ PASS: Native Sidecar '$SIDECAR_NAME' found with restartPolicy: Always."
 else
-    echo "❌ ERROR: No container named '$SIDECAR_NAME' found in the deployment."
+    echo "❌ ERROR: Native Sidecar not found or missing restartPolicy: Always."
 fi
 
 # 3. Check for Shared emptyDir Volume
