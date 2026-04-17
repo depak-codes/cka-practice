@@ -2,36 +2,31 @@
 
 echo "🔍 Validating Resource Allocation..."
 
-# 1. Check if Replicas = 3
-REPLICAS=$(kubectl get deployment wordpress -o jsonpath='{.spec.replicas}')
-if [ "$REPLICAS" -eq 3 ]; then
-    echo "✅ Replicas scaled to 3."
+# 1. Verify Limits remained UNCHANGED (as per exam rules)
+M_LIM_MEM=$(kubectl get deployment wordpress -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}')
+M_LIM_CPU=$(kubectl get deployment wordpress -o jsonpath='{.spec.template.spec.containers[0].resources.limits.cpu}')
+
+if [[ "$M_LIM_MEM" == "500Mi" && "$M_LIM_CPU" == "300m" ]]; then
+    echo "✅ Success: Limits were not tampered with."
 else
-    echo "❌ Replicas are $REPLICAS, should be 3."
+    echo "❌ Failure: You modified the Limits! The exam said 'Do not touch limits'."
+    exit 1
 fi
 
-# 2. Check Init vs Main Container equality
-INIT_MEM=$(kubectl get deployment wordpress -o jsonpath='{.spec.template.spec.initContainers[0].resources.requests.memory}')
-MAIN_MEM=$(kubectl get deployment wordpress -o jsonpath='{.spec.template.spec.containers[0].resources.requests.memory}')
-INIT_CPU=$(kubectl get deployment wordpress -o jsonpath='{.spec.template.spec.initContainers[0].resources.requests.cpu}')
-MAIN_CPU=$(kubectl get deployment wordpress -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu}')
+# 2. Check if Requests match between Init and Main
+I_REQ_MEM=$(kubectl get deployment wordpress -o jsonpath='{.spec.template.spec.initContainers[0].resources.requests.memory}')
+M_REQ_MEM=$(kubectl get deployment wordpress -o jsonpath='{.spec.template.spec.containers[0].resources.requests.memory}')
 
-if [ "$INIT_MEM" == "$MAIN_MEM" ] && [ -n "$INIT_MEM" ]; then
-    echo "✅ Memory Requests are equal and set ($MAIN_MEM)."
+if [[ "$I_REQ_MEM" == "$M_REQ_MEM" ]]; then
+    echo "✅ Success: Init and Main requests match ($M_REQ_MEM)."
 else
-    echo "❌ Memory Requests mismatch or not set."
+    echo "❌ Failure: Init ($I_REQ_MEM) and Main ($M_REQ_MEM) requests do not match."
 fi
 
-if [ "$INIT_CPU" == "$MAIN_CPU" ] && [ -n "$INIT_CPU" ]; then
-    echo "✅ CPU Requests are equal and set ($MAIN_CPU)."
+# 3. Check if Pods are actually Running
+RUNNING=$(kubectl get pods -l app=wordpress | grep -c "Running")
+if [ "$RUNNING" -eq 3 ]; then
+    echo "🚀 FINAL SUCCESS: All pods are Running with the correct Request values!"
 else
-    echo "❌ CPU Requests mismatch or not set."
-fi
-
-# 3. Check Limits = Requests (Guaranteed QoS)
-LIMIT_MEM=$(kubectl get deployment wordpress -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}')
-if [ "$LIMIT_MEM" == "$MAIN_MEM" ]; then
-    echo "✅ Guaranteed QoS: Limits match Requests."
-else
-    echo "❌ Limits do not match Requests."
+    echo "❌ Pending: Only $RUNNING/3 pods are Running. Check your math!"
 fi
